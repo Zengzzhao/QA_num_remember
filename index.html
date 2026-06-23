@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>抽题背诵测试</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #4f7cff;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --bg-top: #f5f7ff;
+      --bg-bottom: #ffffff;
+      --text: #1f2937;
+      --text-soft: #6b7280;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: #eef1f8;
+    }
+
+    .app {
+      height: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 上半部分：问题区 */
+    .question-area {
+      flex: 1 1 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: linear-gradient(160deg, var(--bg-top), #e9efff);
+      text-align: center;
+    }
+
+    .counter {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      font-size: 14px;
+      color: var(--text-soft);
+      background: rgba(255, 255, 255, 0.7);
+      padding: 4px 12px;
+      border-radius: 999px;
+    }
+
+    .question-label {
+      font-size: 14px;
+      letter-spacing: 2px;
+      color: var(--primary);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    .question-text {
+      font-size: clamp(22px, 5vw, 36px);
+      line-height: 1.5;
+      font-weight: 700;
+      max-width: 720px;
+    }
+
+    .question-text.empty {
+      color: var(--text-soft);
+      font-weight: 600;
+    }
+
+    /* 下半部分：交互区 */
+    .control-area {
+      flex: 1 1 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: var(--bg-bottom);
+      gap: 20px;
+    }
+
+    /* 答案区，带平滑过渡 */
+    .answer-box {
+      width: 100%;
+      max-width: 600px;
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: max-height 0.4s ease, opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .answer-box.show {
+      max-height: 400px;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .answer-card {
+      background: #f8fafc;
+      border: 1px solid #e5e9f2;
+      border-radius: 14px;
+      padding: 20px 24px;
+      text-align: center;
+    }
+
+    .answer-label {
+      font-size: 13px;
+      color: var(--text-soft);
+      margin-bottom: 8px;
+    }
+
+    .answer-text {
+      font-size: clamp(18px, 4vw, 26px);
+      font-weight: 600;
+      line-height: 1.5;
+      color: var(--text);
+    }
+
+    .buttons {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+      user-select: none;
+    }
+
+    button:active {
+      transform: scale(0.96);
+    }
+
+    .btn-show {
+      background: var(--primary);
+      color: #fff;
+      font-size: 18px;
+      padding: 14px 40px;
+      box-shadow: 0 6px 16px rgba(79, 124, 255, 0.35);
+    }
+
+    .btn-restart {
+      background: var(--primary);
+      color: #fff;
+      font-size: 18px;
+      padding: 14px 40px;
+      box-shadow: 0 6px 16px rgba(79, 124, 255, 0.35);
+    }
+
+    .btn-judge {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      font-size: 30px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-correct {
+      background: var(--success);
+      box-shadow: 0 6px 16px rgba(34, 197, 94, 0.35);
+    }
+
+    .btn-wrong {
+      background: var(--danger);
+      box-shadow: 0 6px 16px rgba(239, 68, 68, 0.35);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* 移动端适配 */
+    @media (max-width: 600px) {
+      .question-area, .control-area {
+        padding: 18px;
+      }
+      .btn-show {
+        padding: 12px 32px;
+        font-size: 16px;
+      }
+      .btn-judge {
+        width: 64px;
+        height: 64px;
+        font-size: 26px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="question-area">
+      <div class="counter" id="counter"></div>
+      <div class="question-label" id="questionLabel">问题</div>
+      <div class="question-text" id="questionText">加载中…</div>
+    </section>
+
+    <section class="control-area">
+      <div class="answer-box" id="answerBox">
+        <div class="answer-card">
+          <div class="answer-label">答案</div>
+          <div class="answer-text" id="answerText"></div>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button class="btn-show" id="btnShow">查看答案</button>
+        <div class="buttons hidden" id="judgeButtons">
+          <button class="btn-judge btn-correct" id="btnCorrect" title="已掌握">√</button>
+          <button class="btn-judge btn-wrong" id="btnWrong" title="未掌握">×</button>
+        </div>
+        <button class="btn-restart hidden" id="btnRestart">重新开始</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // 初始题库（百分比 → 对应分数）
+    const initialBank = [
+      { question: "5.3%", answer: "1/19" },
+      { question: "5.6%", answer: "1/18" },
+      { question: "5.9%", answer: "1/17" },
+      { question: "6.25%", answer: "1/16" },
+      { question: "6.7%", answer: "1/15" },
+      { question: "7.1%", answer: "1/14" },
+      { question: "7.7%", answer: "1/13" },
+      { question: "8.3%", answer: "1/12" },
+      { question: "9.1%", answer: "1/11" },
+      { question: "9.5%", answer: "1/10.5" },
+      { question: "10.5%", answer: "1/9.5" },
+      { question: "11.1%", answer: "1/9" },
+      { question: "12%", answer: "1/8.3" },
+      { question: "12.5%", answer: "1/8" },
+      { question: "13%", answer: "1/7.7" },
+      { question: "14%", answer: "1/7.1" },
+      { question: "14.3%", answer: "1/7" },
+      { question: "15%", answer: "1/6.7" },
+      { question: "16%", answer: "1/6.25" },
+      { question: "16.7%", answer: "1/6" },
+      { question: "17%", answer: "1/5.9" },
+      { question: "18%", answer: "1/5.6" },
+      { question: "19%", answer: "1/5.3" },
+    //   { question: "22.2%", answer: "1/4.5" }
+    ];
+
+    // 当前题库（从初始题库深拷贝一份，避免污染原始数据）
+    let questionBank = initialBank.map(function (item) { return { ...item }; });
+
+    let currentIndex = -1;
+
+    const questionText = document.getElementById('questionText');
+    const questionLabel = document.getElementById('questionLabel');
+    const answerBox = document.getElementById('answerBox');
+    const answerText = document.getElementById('answerText');
+    const btnShow = document.getElementById('btnShow');
+    const judgeButtons = document.getElementById('judgeButtons');
+    const btnCorrect = document.getElementById('btnCorrect');
+    const btnWrong = document.getElementById('btnWrong');
+    const btnRestart = document.getElementById('btnRestart');
+    const counter = document.getElementById('counter');
+
+    // 隐藏答案与判断按钮，恢复到“查看答案”状态
+    function resetControls() {
+      answerBox.classList.remove('show');
+      judgeButtons.classList.add('hidden');
+      btnRestart.classList.add('hidden');
+      btnShow.classList.remove('hidden');
+    }
+
+    // 随机抽取并显示下一题
+    function showRandomQuestion() {
+      resetControls();
+
+      if (questionBank.length === 0) {
+        questionLabel.classList.add('hidden');
+        questionText.textContent = "题库已清空";
+        questionText.classList.add('empty');
+        btnShow.classList.add('hidden');
+        judgeButtons.classList.add('hidden');
+        answerBox.classList.remove('show');
+        btnRestart.classList.remove('hidden');
+        counter.textContent = "剩余 0 题";
+        currentIndex = -1;
+        return;
+      }
+
+      questionLabel.classList.remove('hidden');
+      questionText.classList.remove('empty');
+
+      currentIndex = Math.floor(Math.random() * questionBank.length);
+      questionText.textContent = questionBank[currentIndex].question;
+      counter.textContent = "剩余 " + questionBank.length + " 题";
+    }
+
+    // 查看答案
+    btnShow.addEventListener('click', function () {
+      if (currentIndex < 0) return;
+      answerText.textContent = questionBank[currentIndex].answer;
+      answerBox.classList.add('show');
+      btnShow.classList.add('hidden');
+      judgeButtons.classList.remove('hidden');
+    });
+
+    // √ 已掌握：从题库删除当前题，切换下一题
+    btnCorrect.addEventListener('click', function () {
+      if (currentIndex < 0) return;
+      questionBank.splice(currentIndex, 1);
+      showRandomQuestion();
+    });
+
+    // × 未掌握：保留题目，切换下一题
+    btnWrong.addEventListener('click', function () {
+      showRandomQuestion();
+    });
+
+    // 重新开始：恢复初始题库，重新来一轮
+    btnRestart.addEventListener('click', function () {
+      questionBank = initialBank.map(function (item) { return { ...item }; });
+      showRandomQuestion();
+    });
+
+    // 初始化
+    showRandomQuestion();
+  </script>
+</body>
+</html>
