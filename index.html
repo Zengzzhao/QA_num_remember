@@ -63,6 +63,17 @@
       border-radius: 999px;
     }
 
+    .btn-home {
+      position: absolute;
+      top: 12px;
+      left: 20px;
+      font-size: 14px;
+      color: var(--primary);
+      background: rgba(255, 255, 255, 0.7);
+      padding: 6px 14px;
+      border-radius: 999px;
+    }
+
     .question-label {
       font-size: 14px;
       letter-spacing: 2px;
@@ -195,6 +206,47 @@
       display: none !important;
     }
 
+    /* 首页选择区 */
+    .home-area {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      padding: 24px;
+      background: linear-gradient(160deg, var(--bg-top), #e9efff);
+      text-align: center;
+    }
+
+    .home-title {
+      font-size: clamp(24px, 6vw, 40px);
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .home-subtitle {
+      font-size: 15px;
+      color: var(--text-soft);
+      margin-top: -16px;
+    }
+
+    .home-buttons {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn-mode {
+      background: var(--primary);
+      color: #fff;
+      font-size: 20px;
+      padding: 22px 48px;
+      border-radius: 16px;
+      box-shadow: 0 6px 16px rgba(79, 124, 255, 0.35);
+    }
+
     /* 移动端适配 */
     @media (max-width: 600px) {
       .question-area, .control-area {
@@ -213,8 +265,20 @@
   </style>
 </head>
 <body>
-  <div class="app">
+  <div class="app" id="homeScreen">
+    <section class="home-area">
+      <div class="home-title">抽题背诵测试</div>
+      <div class="home-subtitle">请选择练习类型</div>
+      <div class="home-buttons">
+        <button class="btn-mode" id="btnModePercent">百化分</button>
+        <button class="btn-mode" id="btnModePower">次方数</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="app hidden" id="quizScreen">
     <section class="question-area">
+      <button class="btn-home" id="btnHome">← 返回首页</button>
       <div class="counter" id="counter"></div>
       <div class="question-label" id="questionLabel">问题</div>
       <div class="question-text" id="questionText">加载中…</div>
@@ -240,8 +304,8 @@
   </div>
 
   <script>
-    // 初始题库（百分比 → 对应分数）
-    const initialBank = [
+    // 百化分题库（百分比 → 对应分数）
+    const percentBank = [
       { question: "5.3%", answer: "1/19" },
       { question: "5.6%", answer: "1/18" },
       { question: "5.9%", answer: "1/17" },
@@ -274,11 +338,46 @@
       { question: "67%", answer: "1/1.5" },
     ];
 
+    // 次方数题库
+    const powerBank = [
+      { question: "11²", answer: "121" },
+      { question: "12²", answer: "144" },
+      { question: "13²", answer: "169" },
+      { question: "14²", answer: "196" },
+      { question: "15²", answer: "225" },
+      { question: "16²", answer: "256" },
+      { question: "17²", answer: "289" },
+      { question: "18²", answer: "324" },
+      { question: "19²", answer: "361" },
+      { question: "21²", answer: "441" },
+      { question: "22²", answer: "484" },
+      { question: "23²", answer: "529" },
+      { question: "24²", answer: "576" },
+      { question: "25²", answer: "625" },
+      { question: "26²", answer: "676" },
+      { question: "27²", answer: "729" },
+      { question: "28²", answer: "784" },
+      { question: "29²", answer: "841" },
+      { question: "1.2³", answer: "1.7" },
+      { question: "1.3³", answer: "2.2" },
+      { question: "1.4³", answer: "2.7" },
+      { question: "1.2⁴", answer: "2.0" },
+      { question: "1.3⁴", answer: "2.9" },
+      { question: "1.4⁴", answer: "3.8" },
+    ];
+
+    // 当前使用的初始题库（根据首页选择而定）
+    let initialBank = [];
+
     // 当前题库（从初始题库深拷贝一份，避免污染原始数据）
-    let questionBank = initialBank.map(function (item) { return { ...item }; });
+    let questionBank = [];
 
     let currentIndex = -1;
 
+    const homeScreen = document.getElementById('homeScreen');
+    const quizScreen = document.getElementById('quizScreen');
+    const btnModePercent = document.getElementById('btnModePercent');
+    const btnModePower = document.getElementById('btnModePower');
     const questionText = document.getElementById('questionText');
     const questionLabel = document.getElementById('questionLabel');
     const answerBox = document.getElementById('answerBox');
@@ -289,6 +388,7 @@
     const btnWrong = document.getElementById('btnWrong');
     const btnRestart = document.getElementById('btnRestart');
     const counter = document.getElementById('counter');
+    const btnHome = document.getElementById('btnHome');
 
     // 隐藏答案与判断按钮，恢复到“查看答案”状态
     function resetControls() {
@@ -344,14 +444,40 @@
       showRandomQuestion();
     });
 
-    // 重新开始：恢复初始题库，重新来一轮
+    // 重新开始：回到首页重新选择
     btnRestart.addEventListener('click', function () {
-      questionBank = initialBank.map(function (item) { return { ...item }; });
-      showRandomQuestion();
+      goHome();
     });
 
-    // 初始化
-    showRandomQuestion();
+    // 返回首页
+    function goHome() {
+      quizScreen.classList.add('hidden');
+      homeScreen.classList.remove('hidden');
+    }
+
+    // 答题界面：返回首页按钮
+    btnHome.addEventListener('click', function () {
+      goHome();
+    });
+
+    // 以指定题库开始一轮练习
+    function startQuiz(bank) {
+      initialBank = bank;
+      questionBank = initialBank.map(function (item) { return { ...item }; });
+      homeScreen.classList.add('hidden');
+      quizScreen.classList.remove('hidden');
+      showRandomQuestion();
+    }
+
+    // 首页：选择百化分
+    btnModePercent.addEventListener('click', function () {
+      startQuiz(percentBank);
+    });
+
+    // 首页：选择次方数
+    btnModePower.addEventListener('click', function () {
+      startQuiz(powerBank);
+    });
   </script>
 </body>
 </html>
