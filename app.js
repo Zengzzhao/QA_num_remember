@@ -5,6 +5,7 @@
   const modeButtons = ['btnModePercent', 'btnModePower', 'btnModeTwoChar', 'btnModeThreeChar', 'btnModeFourChar'].map(el);
   let db, user = null, progress = new Map(), ready = false, busy = false;
   let queue = [], current = null, activeMode = 'free', generation = 0;
+  const extraReviews = new Map();
   const timeFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' });
   const today = () => timeFormatter.format(new Date());
   const errorText = error => error?.message || String(error);
@@ -70,13 +71,18 @@
     el('btnRestart').classList.toggle('hidden', queue.length > 0);
     el('btnShow').classList.toggle('hidden', !queue.length);
     el('questionLabel').textContent = activeMode === 'free' ? '自由练习' : activeMode === 'new' ? '学习新题' : '今日复习';
-    current = queue.length ? queue[Math.floor(Math.random() * queue.length)] : null;
+    const candidates = queue.length > 1 ? queue.filter(card => card.id !== current?.id) : queue;
+    current = candidates.length ? candidates[Math.floor(Math.random() * candidates.length)] : null;
+    if (current && extraReviews.has(current.id)) {
+      el('questionLabel').textContent += ` · 错题巩固，还需作答 ${extraReviews.get(current.id)} 次`;
+    }
     el('questionText').textContent = current?.question || '本轮已完成';
     el('counter').textContent = `剩余 ${queue.length} 题`;
   }
   function goHome() {
     if (busy) return;
     current = null; queue = [];
+    extraReviews.clear();
     el('quizScreen').classList.add('hidden');
     el('homeScreen').classList.remove('hidden');
     if (db) refresh(); else renderHome();
@@ -88,6 +94,7 @@
       if (!ready || busy) return;
     }
     activeMode = mode;
+    extraReviews.clear();
     queue = [...cardsFor(banks[i], mode)];
     el('homeScreen').classList.add('hidden');
     el('quizScreen').classList.remove('hidden');
@@ -104,10 +111,11 @@
   async function judge(remembered) {
     if (!current || busy) return;
     const card = current;
+    const remaining = extraReviews.get(card.id);
     busy = true;
     ['btnCorrect', 'btnWrong', 'btnHome', 'btnRestart'].forEach(id => el(id).disabled = true);
     try {
-      if (activeMode !== 'free') {
+      if (activeMode !== 'free' && remaining === undefined) {
         el('saveStatus').textContent = '正在保存…';
         const { data, error } = await db.rpc('record_review', { p_card_id: card.id, p_remembered: remembered });
         if (error) throw error;
@@ -116,8 +124,24 @@
         progress.set(card.id, row);
         el('saveStatus').textContent = `已保存，下次复习：${timeFormatter.format(new Date(row.due_at))}`;
       }
-      // 云端每题每天记录一次；错题明天复习，自由练习可以反复练习。
-      if (activeMode !== 'free' || remembered) queue = queue.filter(item => item.id !== card.id);
+      if (activeMode === 'free') {
+        if (remembered) queue = queue.filter(item => item.id !== card.id);
+      } else if (remaining !== undefined) {
+        // 巩固作答不覆盖首次遗忘记录，也不因再次答错重新计数。
+        if (remaining > 1) {
+          extraReviews.set(card.id, remaining - 1);
+          el('saveStatus').textContent = `还需巩固 ${remaining - 1} 次，下次复习日期保持不变。`;
+        } else {
+          extraReviews.delete(card.id);
+          queue = queue.filter(item => item.id !== card.id);
+          el('saveStatus').textContent = '两次巩固已完成，已移出本轮，下次复习日期保持不变。';
+        }
+      } else if (!remembered) {
+        extraReviews.set(card.id, 2);
+        el('saveStatus').textContent += ' · 本轮还将出现 2 次';
+      } else {
+        queue = queue.filter(item => item.id !== card.id);
+      }
       nextQuestion();
     } catch (error) {
       el('saveStatus').textContent = '保存失败，当前题已保留，请重试：' + errorText(error);
@@ -159,6 +183,7 @@
     db.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || (user && session?.user.id && session.user.id !== user.id)) {
         generation++; ready = false; user = null; progress.clear(); current = null; queue = [];
+        extraReviews.clear();
         el('quizScreen').classList.add('hidden'); el('homeScreen').classList.remove('hidden');
         el('accountStatus').textContent = '登录状态已改变，请重新加载进度。'; renderHome();
       }
