@@ -236,6 +236,7 @@
       gap: 20px;
       flex-wrap: wrap;
       justify-content: center;
+      max-width: 760px;
     }
 
     .btn-mode {
@@ -272,6 +273,9 @@
       <div class="home-buttons">
         <button class="btn-mode" id="btnModePercent">百化分</button>
         <button class="btn-mode" id="btnModePower">次方数</button>
+        <button class="btn-mode" id="btnModeTwoChar">两字词语</button>
+        <button class="btn-mode" id="btnModeThreeChar">三字词语</button>
+        <button class="btn-mode" id="btnModeFourChar">四字成语</button>
       </div>
     </section>
   </div>
@@ -379,6 +383,151 @@
       { question: "1.4⁴", answer: "3.8" },
     ];
 
+    // 两字词语：根据词语回忆常见搭配或用法
+    const twoCharBank = [
+      { question: "滋养", answer: "源泉" },
+      { question: "打破", answer: "垄断" },
+      {
+        question: "精湛、精辟、精准、精确如何区分？",
+        answer: "精湛：技艺；精辟：言语、见解；精准：方向；精确：计算",
+      },
+      { question: "浑厚、雄厚、丰厚、厚实如何区分？", answer: "浑厚：声音；雄厚：资金、实力、基础、背景；丰厚：报酬；厚实：被子、家底、功底。" },
+      { question: "繁复", answer: "艺术品、学术理论精致周密；办事流程麻烦" },
+      { question: "凝聚、凝结、汇聚如何区分？", answer: "凝聚：共识；凝结：物理现象，汗水、心血；汇聚：力量。" },
+      { question: "管窥、窥见、窥视、窥测如何区分？", answer: "管窥、窥见：侧重以小见大，多为褒义；窥视：暗中观察、偷看，贬义；窥测：窥探揣测，褒贬均可。" },
+      { question: "粗浅", answer: "水平低，贬义" },
+      { question: "形成、生成如何区分？", answer: "形成：用于自然现象（形成山脉）、社会现象（形成制度）、抽象概念（形成观念）；生成：多用于生物学（细胞生成）、化学反应（氧气生成）、计算机技术（代码生成）。" },
+      { question: "遏止、取缔如何区分？", answer: "遏止：行为、趋势；取缔：场所、作坊" },
+      { question: "整治、整顿", answer: "歪风" },
+    ];
+
+    // 三字词语：根据词语回忆比喻义或常见用法
+    const threeCharBank = [
+      { question: "翻烧饼", answer: "计划频繁变动" },
+      { question: "同心圆", answer: "立场不同，但围绕同一个目标努力" },
+      { question: "象牙塔", answer: "脱离现实生活、与世俗社会隔离开来的封闭环境" },
+      { question: "连环扣", answer: "象征复杂交织的情感、矛盾关系" },
+      { question: "压舱石", answer: "比喻在整体中起稳定、支撑作用的核心力量" },
+      { question: "敲门砖", answer: "为达到某个目的而暂时使用的工具，成功后可能被抛弃" },
+      { question: "马前卒、排头兵如何区分？", answer: "马前卒：为别人效力的人；排头兵：在行动中积极领头的人。" },
+      { question: "晴雨表", answer: "能及时反映事物变化的指示物" },
+      { question: "弄潮儿", answer: "敢于冒险、有进取精神的人" },
+      { question: "深水区", answer: "比喻到了重点时期，或从表面进入内部" },
+      { question: "牛鼻子", answer: "事物的关键" },
+      { question: "定盘星", answer: "强调稳定全局的基础性作用。" },
+      { question: "孺子牛", answer: "为人民服务的人" },
+      { question: "冷板凳", answer: "不受重视而担任清闲职务" },
+      { question: "捞稻草", answer: "在绝望中做徒劳无益的挣扎" },
+      { question: "上台阶", answer: "取得新的、更大的成就" },
+      { question: "耍花枪", answer: "卖弄小聪明的欺骗行为" },
+      { question: "拉清单", answer: "结算彼此的恩怨利害" },
+      { question: "应声虫", answer: "没有主见，只会鹦鹉学舌的人" },
+      { question: "侃大山", answer: "没有目的地聊天" },
+      { question: "触霉头", answer: "遭遇不顺心的事" },
+      { question: "台柱子", answer: "集体的骨干" },
+      { question: "马大哈", answer: "粗心的人" },
+      { question: "印把子", answer: "政权" },
+    ];
+
+    // 四字成语及固定搭配
+    const fourCharBank = [
+      { question: "粉墨登场", answer: "坏人登上政治舞台" },
+      { question: "不落窠臼", answer: "有创新" },
+      { question: "九龙治水", answer: "一件事多个人管，结果没人管好" },
+      { question: "挂一漏万", answer: "列举少、遗漏多，内容不全" },
+      { question: "买椟还珠", answer: "舍本逐末" },
+      { question: "言近旨远", answer: "语言浅显，而意旨深远" },
+      { question: "如丘而止", answer: "遇到困难就停下" },
+      { question: "和风细雨", answer: "说话态度温和" },
+      { question: "亦步亦趋、拾人牙慧如何区分？", answer: "亦步亦趋：模仿别人，缺乏主见；拾人牙慧：拾取别人的只言片语当作自己的话。" },
+      { question: "纲举目张", answer: "抓住主要矛盾来解决问题" },
+      { question: "微文深诋", answer: "用苛细的法律条文陷害他人" },
+      { question: "扞格不通", answer: "观点或事物不合，互相排斥" },
+      { question: "与虎谋皮", answer: "跟恶人商量，要他放弃自己的利益" },
+      { question: "珠玑之言、不刊之论、金科玉律如何区分？", answer: "珠玑之言：言辞优美；不刊之论：正确言论；金科玉律：必须奉行、不可违反的准则或规矩。" },
+      { question: "入境问俗", answer: "到新环境后先了解当地规矩，以便融入、避免冒犯" },
+      { question: "火中取栗", answer: "冒险替别人出力，自己没得到好处反而吃亏" },
+      { question: "投鼠忌器", answer: "想做事有所顾忌，不敢放手去干" },
+      { question: "零和博弈", answer: "你赢我输、你死我活的竞争" },
+      { question: "勠力同心", answer: "齐心协力共同把一件事做好" },
+      { question: "反求诸己", answer: "反过来要求自己，从自身找原因" },
+      { question: "管窥蠡测", answer: "从竹管里看天，用瓢来量海水。比喻见识狭窄、片面，对事物了解极其有限" },
+      { question: "狗尾续貂、叠床架屋如何区分？", answer: "狗尾续貂：用次品续在好材料的后面，后续的内容不如原来的好；叠床架屋：在已经足够的基础上，再增加没有必要的东西" },
+      { question: "离经叛道", answer: "行为、言论不符合公认的准则" },
+      { question: "矫枉过正", answer: "纠正错误时用力过猛，陷入另一种偏差" },
+      { question: "珠联璧合", answer: "好的事物聚在一起，搭配得天衣无缝" },
+      { question: "积厚流光", answer: "前辈创下的功绩惠及后世" },
+      { question: "大相径庭、伯仲之间如何区分？", answer: "大相径庭：差别很大；伯仲之间：不相上下，难分优劣。" },
+      { question: "削足适履", answer: "不根据实际情况变通，生搬硬套" },
+      { question: "食古不化", answer: "读死书，不会创新" },
+      { question: "陈陈相因", answer: "死板地沿袭前人的做法" },
+      { question: "徒托空言", answer: "空谈，不付诸实践" },
+      { question: "无稽之谈", answer: "没有根据的话" },
+      { question: "因势利导", answer: "根据客观形势发展规律采取措施，把局势引向有利方向" },
+      { question: "众志成城、相濡以沫、休戚与共如何区分？", answer: "众志成城：众人团结一致就能克服困难；相濡以沫：在困境中以微小力量互相帮助；休戚与共：a和b命运相连" },
+      { question: "一以贯之", answer: "思想贯穿于事物之中" },
+      { question: "等量齐观", answer: "把不同的事物用相同标准评价" },
+      { question: "一得之愚、一得之功如何区分？", answer: "一得之愚：谦称自己提出的意见浅陋；一得之功：谦称自己做的事情不值一提。" },
+      { question: "博闻强识", answer: "一个人知识面宽泛、记忆力强" },
+      { question: "层台累榭", answer: "人工造景气势恢宏" },
+      { question: "铢两悉称", answer: "双方完全相等" },
+      { question: "异军突起", answer: "一支新力量突然变强，引起关注" },
+      { question: "习焉不察", answer: "习惯了某种事物，察觉不到其中异常" },
+      { question: "靶向治疗", answer: "精确治疗" },
+      { question: "欲盖弥彰、相得益彰如何区分？", answer: "欲盖弥彰：想掩盖坏事，结果反而暴露得更明显；相得益彰：两件事物互相配合，变得更好。" },
+      { question: "青黄不接", answer: "后继无人" },
+      { question: "运斤成风", answer: "手法纯熟，技艺出神入化" },
+      { question: "郑人买履", answer: "不知变通" },
+      { question: "叶公好龙", answer: "表面声称爱好某物，实际上并非真正爱好" },
+      { question: "不负众望、不孚众望如何区分？", answer: "不负众望：符合大家的期望；不孚众望：不符合大家的期望" },
+      { question: "积重难返", answer: "长期形成的不良习俗不容易改变" },
+      { question: "相沿成习", answer: "依照相传下来的一套做法，慢慢成为习惯" },
+      { question: "闭门造车", answer: "只凭主观办事，不顾客观实际" },
+      { question: "竿头直上", answer: "比喻进步快" },
+      { question: "闻过则喜", answer: "虚心接受别人的意见" },
+      { question: "虚怀若谷", answer: "谦虚、有气量" },
+      { question: "博采众长", answer: "吸收各家的长处" },
+      { question: "大而化之", answer: "办事不细致" },
+      { question: "大行其道", answer: "事物开始流行" },
+      { question: "独善其身", answer: "只顾自己，不关心身外事" },
+      { question: "各行其是", answer: "思想不统一，各人按自己的意愿主张去做" },
+      { question: "求全责备", answer: "对人、事要求完美" },
+      { question: "洗垢求瘢", answer: "对已经完美的人过分挑剔错误" },
+      { question: "超然物外", answer: "超脱于尘世之外" },
+      { question: "慎小谨微", answer: "对琐碎事情过分谨慎，以至于畏缩" },
+      { question: "技高一筹、更胜一筹如何区分？", answer: "技高一筹：范围较窄，专指技能更高；更胜一筹：范围更广，可指技能、风格等方面更好。" },
+      { question: "莺声燕语", answer: "女子婉转悦耳的声音" },
+      { question: "有的放矢", answer: "做事有明确的目的" },
+      { question: "昭然若揭", answer: "狼子野心，贬义" },
+      { question: "力薄才疏", answer: "人能力有限，自谦" },
+      { question: "一哄而上", answer: "强调时间上的同步，没有准备就做同一件事" },
+      { question: "浮光掠影", answer: "对事物印象不深刻" },
+      { question: "如虎添翼", answer: "强大的事物得到帮助后变得更强" },
+      { question: "如鱼得水", answer: "找到最适合自己的环境" },
+      { question: "如臂使指", answer: "指挥调动得心应手" },
+      { question: "乏善可陈", answer: "没有称赞的优点" },
+      { question: "差强人意", answer: "大体上还能使人满意" },
+      { question: "不名一文", answer: "贫困" },
+      { question: "笃志力行", answer: "坚定信念，努力实践" },
+      { question: "遥不可及、望尘莫及如何区分？", answer: "遥不可及：难以企及的目标 ；望尘莫及：差距大，赶不上。" },
+      { question: "虚与委蛇", answer: "表面热情，实际敷衍应付" },
+      { question: "雾里看花", answer: "事情复杂而看不明白（贬）；诗词境界高而领会不了（褒）；景色朦胧而看不清（褒）" },
+      { question: "缘木求鱼", answer: "方向错误，达不到目的" },
+      { question: "抱薪救火、饮鸩止渴、扬汤止沸如何区分？", answer: "抱薪救火、饮鸩止渴：方法错误，反而使问题更严重；扬汤止沸：方法不彻底，不能根治问题。" },
+      { question: "防微杜渐", answer: "坏事刚有苗头就加以制止" },
+      { question: "曲突徙薪", answer: "事先采取措施，防止危险发生" },
+      { question: "汗牛充栋、浩如烟海、卷帙繁浩如何区分？", answer: "汗牛充栋、浩如烟海：藏书多；卷帙繁浩：藏书多；一部书篇幅长。" },
+      { question: "博大精深", answer: "书籍内容丰富" },
+      { question: "谋定后动", answer: "做事前有明确计划，再采取行动" },
+      { question: "首当其冲", answer: "首先受到冲击或伤害" },
+      { question: "作壁上观", answer: "站在一旁观看，不帮忙" },
+      { question: "临空蹈虚", answer: "无史实依据的虚构" },
+      { question: "言不及义、一针见血如何区分？", answer: "言不及义：说话没有谈到正经道理或关键；一针见血：说话直截了当地指出问题关键。" },
+      { question: "熙熙攘攘", answer: "人来人往，非常热闹" },
+      { question: "各得其所", answer: "每个人或事物都得到合适的位置" },
+      { question: "举重若轻", answer: "处理复杂任务也能显得轻松" },
+    ];
+
     // 当前使用的初始题库（根据首页选择而定）
     let initialBank = [];
 
@@ -391,6 +540,9 @@
     const quizScreen = document.getElementById('quizScreen');
     const btnModePercent = document.getElementById('btnModePercent');
     const btnModePower = document.getElementById('btnModePower');
+    const btnModeTwoChar = document.getElementById('btnModeTwoChar');
+    const btnModeThreeChar = document.getElementById('btnModeThreeChar');
+    const btnModeFourChar = document.getElementById('btnModeFourChar');
     const questionText = document.getElementById('questionText');
     const questionLabel = document.getElementById('questionLabel');
     const answerBox = document.getElementById('answerBox');
@@ -490,6 +642,19 @@
     // 首页：选择次方数
     btnModePower.addEventListener('click', function () {
       startQuiz(powerBank);
+    });
+
+    // 首页：选择词语练习类型
+    btnModeTwoChar.addEventListener('click', function () {
+      startQuiz(twoCharBank);
+    });
+
+    btnModeThreeChar.addEventListener('click', function () {
+      startQuiz(threeCharBank);
+    });
+
+    btnModeFourChar.addEventListener('click', function () {
+      startQuiz(fourCharBank);
     });
   </script>
 </body>
