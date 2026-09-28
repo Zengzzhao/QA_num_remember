@@ -263,13 +263,34 @@
         font-size: 26px;
       }
     }
+    .home-area { height: auto; min-height: 100%; gap: 22px; }
+    .question-area { position: relative; padding-top: 72px; }
+    .answer-box.show { max-height: 60vh; overflow-y: auto; }
+    .answer-text { white-space: pre-line; text-align: left; }
+    .btn-home-inline, select { padding: 12px 16px; border-radius: 10px; font: inherit; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    #accountStatus, #saveStatus, #summary { font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
   </style>
 </head>
 <body>
   <div class="app" id="homeScreen">
     <section class="home-area">
       <div class="home-title">抽题背诵测试</div>
-      <div class="home-subtitle">请选择练习类型</div>
+      <div class="home-subtitle">间隔复习 · 进度随账号同步</div>
+      <div class="buttons">
+        <button class="btn-show" id="btnLogin">GitHub 登录</button>
+        <button class="btn-home-inline hidden" id="btnLogout">退出登录</button>
+        <button class="btn-home-inline" id="btnRefresh">刷新进度</button>
+      </div>
+      <p id="accountStatus" role="status" aria-live="polite"></p>
+      <label>练习方式
+        <select id="practiceMode">
+          <option value="due">今日复习</option>
+          <option value="new">学习新题</option>
+          <option value="free">自由练习（不更新进度）</option>
+        </select>
+      </label>
+      <p id="summary" aria-live="polite"></p>
       <div class="home-buttons">
         <button class="btn-mode" id="btnModePercent">百化分</button>
         <button class="btn-mode" id="btnModePower">次方数</button>
@@ -296,13 +317,14 @@
         </div>
       </div>
 
+      <p id="saveStatus" role="status" aria-live="polite"></p>
       <div class="buttons">
         <button class="btn-show" id="btnShow">查看答案</button>
         <div class="buttons hidden" id="judgeButtons">
           <button class="btn-judge btn-correct" id="btnCorrect" title="已掌握">√</button>
           <button class="btn-judge btn-wrong" id="btnWrong" title="未掌握">×</button>
         </div>
-        <button class="btn-restart hidden" id="btnRestart">重新开始</button>
+        <button class="btn-restart hidden" id="btnRestart">返回首页</button>
       </div>
     </section>
   </div>
@@ -310,352 +332,233 @@
   <script>
     // 百化分题库（百分比 → 对应分数）
     const percentBank = [
-      { question: "4%", answer: "1/25" },
-      { question: "5%", answer: "1/20" },
-      { question: "5.3%", answer: "1/19" },
-      { question: "5.6%", answer: "1/18" },
-      { question: "5.9%", answer: "1/17" },
-      { question: "6.25%", answer: "1/16" },
-      { question: "6.7%", answer: "1/15" },
-      { question: "7.1%", answer: "1/14" },
-      { question: "7.7%", answer: "1/13" },
-      { question: "8.3%", answer: "1/12" },
-      { question: "9.1%", answer: "1/11" },
-      { question: "9.5%", answer: "1/10.5" },
-      { question: "10%", answer: "1/10" },
-      { question: "10.5%", answer: "1/9.5" },
-      { question: "11.1%", answer: "1/9" },
-      { question: "12%", answer: "1/8.3" },
-      { question: "12.5%", answer: "1/8" },
-      { question: "13%", answer: "1/7.7" },
-      { question: "14%", answer: "1/7.1" },
-      { question: "14.3%", answer: "1/7" },
-      { question: "15%", answer: "1/6.7" },
-      { question: "16%", answer: "1/6.25" },
-      { question: "16.7%", answer: "1/6" },
-      { question: "17%", answer: "1/5.9" },
-      { question: "18%", answer: "1/5.6" },
-      { question: "19%", answer: "1/5.3" },
-      { question: "20%", answer: "1/5" },
-      { question: "22.2%", answer: "1/4.5" },
-      { question: "24%", answer: "1/4.2" },
-      { question: "27%", answer: "1/3.7" },
-      { question: "28.6%", answer: "1/3.5" },
-      { question: "30%", answer: "1/3.3" },
-      { question: "33%", answer: "1/3" },
-      { question: "37%", answer: "1/2.7" },
-      { question: "40%", answer: "1/2.5" },
-      { question: "42%", answer: "1/2.4" },
-      { question: "60%", answer: "1/1.66" },
-      { question: "64%", answer: "1/1.56" },
-      { question: "67%", answer: "1/1.5" },
+      { id: "percent-001", question: "4%", answer: "1/25" },
+      { id: "percent-002", question: "5%", answer: "1/20" },
+      { id: "percent-003", question: "5.3%", answer: "1/19" },
+      { id: "percent-004", question: "5.6%", answer: "1/18" },
+      { id: "percent-005", question: "5.9%", answer: "1/17" },
+      { id: "percent-006", question: "6.25%", answer: "1/16" },
+      { id: "percent-007", question: "6.7%", answer: "1/15" },
+      { id: "percent-008", question: "7.1%", answer: "1/14" },
+      { id: "percent-009", question: "7.7%", answer: "1/13" },
+      { id: "percent-010", question: "8.3%", answer: "1/12" },
+      { id: "percent-011", question: "9.1%", answer: "1/11" },
+      { id: "percent-012", question: "9.5%", answer: "1/10.5" },
+      { id: "percent-013", question: "10%", answer: "1/10" },
+      { id: "percent-014", question: "10.5%", answer: "1/9.5" },
+      { id: "percent-015", question: "11.1%", answer: "1/9" },
+      { id: "percent-016", question: "12%", answer: "1/8.3" },
+      { id: "percent-017", question: "12.5%", answer: "1/8" },
+      { id: "percent-018", question: "13%", answer: "1/7.7" },
+      { id: "percent-019", question: "14%", answer: "1/7.1" },
+      { id: "percent-020", question: "14.3%", answer: "1/7" },
+      { id: "percent-021", question: "15%", answer: "1/6.7" },
+      { id: "percent-022", question: "16%", answer: "1/6.25" },
+      { id: "percent-023", question: "16.7%", answer: "1/6" },
+      { id: "percent-024", question: "17%", answer: "1/5.9" },
+      { id: "percent-025", question: "18%", answer: "1/5.6" },
+      { id: "percent-026", question: "19%", answer: "1/5.3" },
+      { id: "percent-027", question: "20%", answer: "1/5" },
+      { id: "percent-028", question: "22.2%", answer: "1/4.5" },
+      { id: "percent-029", question: "24%", answer: "1/4.2" },
+      { id: "percent-030", question: "27%", answer: "1/3.7" },
+      { id: "percent-031", question: "28.6%", answer: "1/3.5" },
+      { id: "percent-032", question: "30%", answer: "1/3.3" },
+      { id: "percent-033", question: "33%", answer: "1/3" },
+      { id: "percent-034", question: "37%", answer: "1/2.7" },
+      { id: "percent-035", question: "40%", answer: "1/2.5" },
+      { id: "percent-036", question: "42%", answer: "1/2.4" },
+      { id: "percent-037", question: "60%", answer: "1/1.66" },
+      { id: "percent-038", question: "64%", answer: "1/1.56" },
+      { id: "percent-039", question: "67%", answer: "1/1.5" },
     ];
 
     // 次方数题库
     const powerBank = [
-      { question: "11²", answer: "121" },
-      { question: "12²", answer: "144" },
-      { question: "13²", answer: "169" },
-      { question: "14²", answer: "196" },
-      { question: "15²", answer: "225" },
-      { question: "16²", answer: "256" },
-      { question: "17²", answer: "289" },
-      { question: "18²", answer: "324" },
-      { question: "19²", answer: "361" },
-      { question: "21²", answer: "441" },
-      { question: "22²", answer: "484" },
-      { question: "23²", answer: "529" },
-      { question: "24²", answer: "576" },
-      { question: "25²", answer: "625" },
-      { question: "26²", answer: "676" },
-      { question: "27²", answer: "729" },
-      { question: "28²", answer: "784" },
-      { question: "29²", answer: "841" },
-      { question: "1.1³", answer: "1.3" },
-      { question: "1.2³", answer: "1.7" },
-      { question: "1.3³", answer: "2.2" },
-      { question: "1.4³", answer: "2.7" },
-      { question: "1.05⁴", answer: "1.22" },
-      { question: "1.1⁴", answer: "1.46" },
-      { question: "1.15⁴", answer: "1.75" },
-      { question: "1.2⁴", answer: "2.0" },
-      { question: "1.3⁴", answer: "2.9" },
-      { question: "1.4⁴", answer: "3.8" },
+      { id: "power-001", question: "11²", answer: "121" },
+      { id: "power-002", question: "12²", answer: "144" },
+      { id: "power-003", question: "13²", answer: "169" },
+      { id: "power-004", question: "14²", answer: "196" },
+      { id: "power-005", question: "15²", answer: "225" },
+      { id: "power-006", question: "16²", answer: "256" },
+      { id: "power-007", question: "17²", answer: "289" },
+      { id: "power-008", question: "18²", answer: "324" },
+      { id: "power-009", question: "19²", answer: "361" },
+      { id: "power-010", question: "21²", answer: "441" },
+      { id: "power-011", question: "22²", answer: "484" },
+      { id: "power-012", question: "23²", answer: "529" },
+      { id: "power-013", question: "24²", answer: "576" },
+      { id: "power-014", question: "25²", answer: "625" },
+      { id: "power-015", question: "26²", answer: "676" },
+      { id: "power-016", question: "27²", answer: "729" },
+      { id: "power-017", question: "28²", answer: "784" },
+      { id: "power-018", question: "29²", answer: "841" },
+      { id: "power-019", question: "1.1³", answer: "1.3" },
+      { id: "power-020", question: "1.2³", answer: "1.7" },
+      { id: "power-021", question: "1.3³", answer: "2.2" },
+      { id: "power-022", question: "1.4³", answer: "2.7" },
+      { id: "power-023", question: "1.05⁴", answer: "1.22" },
+      { id: "power-024", question: "1.1⁴", answer: "1.46" },
+      { id: "power-025", question: "1.15⁴", answer: "1.75" },
+      { id: "power-026", question: "1.2⁴", answer: "2.0" },
+      { id: "power-027", question: "1.3⁴", answer: "2.9" },
+      { id: "power-028", question: "1.4⁴", answer: "3.8" },
     ];
 
     // 两字词语：根据词语回忆常见搭配或用法
     const twoCharBank = [
-      { question: "滋养", answer: "源泉" },
-      { question: "打破", answer: "垄断" },
-      {
-        question: "精湛、精辟、精准、精确如何区分？",
+      { id: "two-001", question: "滋养", answer: "源泉" },
+      { id: "two-002", question: "打破", answer: "垄断" },
+      { id: "two-003", question: "精湛、精辟、精准、精确如何区分？",
         answer: "精湛：技艺；精辟：言语、见解；精准：方向；精确：计算",
       },
-      { question: "浑厚、雄厚、丰厚、厚实如何区分？", answer: "浑厚：声音；雄厚：资金、实力、基础、背景；丰厚：报酬；厚实：被子、家底、功底。" },
-      { question: "繁复", answer: "艺术品、学术理论精致周密；办事流程麻烦" },
-      { question: "凝聚、凝结、汇聚如何区分？", answer: "凝聚：共识；凝结：物理现象，汗水、心血；汇聚：力量。" },
-      { question: "管窥、窥见、窥视、窥测如何区分？", answer: "管窥、窥见：侧重以小见大，多为褒义；窥视：暗中观察、偷看，贬义；窥测：窥探揣测，褒贬均可。" },
-      { question: "粗浅", answer: "水平低，贬义" },
-      { question: "形成、生成如何区分？", answer: "形成：用于自然现象（形成山脉）、社会现象（形成制度）、抽象概念（形成观念）；生成：多用于生物学（细胞生成）、化学反应（氧气生成）、计算机技术（代码生成）。" },
-      { question: "遏止、取缔如何区分？", answer: "遏止：行为、趋势；取缔：场所、作坊" },
-      { question: "整治、整顿", answer: "歪风" },
+      { id: "two-004", question: "浑厚、雄厚、丰厚、厚实如何区分？", answer: "浑厚：声音；雄厚：资金、实力、基础、背景；丰厚：报酬；厚实：被子、家底、功底。" },
+      { id: "two-005", question: "繁复", answer: "艺术品、学术理论精致周密；办事流程麻烦" },
+      { id: "two-006", question: "凝聚、凝结、汇聚如何区分？", answer: "凝聚：共识；凝结：物理现象，汗水、心血；汇聚：力量。" },
+      { id: "two-007", question: "管窥、窥见、窥视、窥测如何区分？", answer: "管窥、窥见：侧重以小见大，多为褒义；窥视：暗中观察、偷看，贬义；窥测：窥探揣测，褒贬均可。" },
+      { id: "two-008", question: "粗浅", answer: "水平低，贬义" },
+      { id: "two-009", question: "形成、生成如何区分？", answer: "形成：用于自然现象（形成山脉）、社会现象（形成制度）、抽象概念（形成观念）；生成：多用于生物学（细胞生成）、化学反应（氧气生成）、计算机技术（代码生成）。" },
+      { id: "two-010", question: "遏止、取缔如何区分？", answer: "遏止：行为、趋势；取缔：场所、作坊" },
+      { id: "two-011", question: "整治、整顿", answer: "歪风" },
     ];
 
     // 三字词语：根据词语回忆比喻义或常见用法
     const threeCharBank = [
-      { question: "翻烧饼", answer: "计划频繁变动" },
-      { question: "同心圆", answer: "立场不同，但围绕同一个目标努力" },
-      { question: "象牙塔", answer: "脱离现实生活、与世俗社会隔离开来的封闭环境" },
-      { question: "连环扣", answer: "象征复杂交织的情感、矛盾关系" },
-      { question: "压舱石", answer: "比喻在整体中起稳定、支撑作用的核心力量" },
-      { question: "敲门砖", answer: "为达到某个目的而暂时使用的工具，成功后可能被抛弃" },
-      { question: "马前卒、排头兵如何区分？", answer: "马前卒：为别人效力的人；排头兵：在行动中积极领头的人。" },
-      { question: "晴雨表", answer: "能及时反映事物变化的指示物" },
-      { question: "弄潮儿", answer: "敢于冒险、有进取精神的人" },
-      { question: "深水区", answer: "比喻到了重点时期，或从表面进入内部" },
-      { question: "牛鼻子", answer: "事物的关键" },
-      { question: "定盘星", answer: "强调稳定全局的基础性作用。" },
-      { question: "孺子牛", answer: "为人民服务的人" },
-      { question: "冷板凳", answer: "不受重视而担任清闲职务" },
-      { question: "捞稻草", answer: "在绝望中做徒劳无益的挣扎" },
-      { question: "上台阶", answer: "取得新的、更大的成就" },
-      { question: "耍花枪", answer: "卖弄小聪明的欺骗行为" },
-      { question: "拉清单", answer: "结算彼此的恩怨利害" },
-      { question: "应声虫", answer: "没有主见，只会鹦鹉学舌的人" },
-      { question: "侃大山", answer: "没有目的地聊天" },
-      { question: "触霉头", answer: "遭遇不顺心的事" },
-      { question: "台柱子", answer: "集体的骨干" },
-      { question: "马大哈", answer: "粗心的人" },
-      { question: "印把子", answer: "政权" },
+      { id: "three-001", question: "翻烧饼", answer: "计划频繁变动" },
+      { id: "three-002", question: "同心圆", answer: "立场不同，但围绕同一个目标努力" },
+      { id: "three-003", question: "象牙塔", answer: "脱离现实生活、与世俗社会隔离开来的封闭环境" },
+      { id: "three-004", question: "连环扣", answer: "象征复杂交织的情感、矛盾关系" },
+      { id: "three-005", question: "压舱石", answer: "比喻在整体中起稳定、支撑作用的核心力量" },
+      { id: "three-006", question: "敲门砖", answer: "为达到某个目的而暂时使用的工具，成功后可能被抛弃" },
+      { id: "three-007", question: "马前卒、排头兵如何区分？", answer: "马前卒：为别人效力的人；排头兵：在行动中积极领头的人。" },
+      { id: "three-008", question: "晴雨表", answer: "能及时反映事物变化的指示物" },
+      { id: "three-009", question: "弄潮儿", answer: "敢于冒险、有进取精神的人" },
+      { id: "three-010", question: "深水区", answer: "比喻到了重点时期，或从表面进入内部" },
+      { id: "three-011", question: "牛鼻子", answer: "事物的关键" },
+      { id: "three-012", question: "定盘星", answer: "强调稳定全局的基础性作用。" },
+      { id: "three-013", question: "孺子牛", answer: "为人民服务的人" },
+      { id: "three-014", question: "冷板凳", answer: "不受重视而担任清闲职务" },
+      { id: "three-015", question: "捞稻草", answer: "在绝望中做徒劳无益的挣扎" },
+      { id: "three-016", question: "上台阶", answer: "取得新的、更大的成就" },
+      { id: "three-017", question: "耍花枪", answer: "卖弄小聪明的欺骗行为" },
+      { id: "three-018", question: "拉清单", answer: "结算彼此的恩怨利害" },
+      { id: "three-019", question: "应声虫", answer: "没有主见，只会鹦鹉学舌的人" },
+      { id: "three-020", question: "侃大山", answer: "没有目的地聊天" },
+      { id: "three-021", question: "触霉头", answer: "遭遇不顺心的事" },
+      { id: "three-022", question: "台柱子", answer: "集体的骨干" },
+      { id: "three-023", question: "马大哈", answer: "粗心的人" },
+      { id: "three-024", question: "印把子", answer: "政权" },
     ];
 
     // 四字成语及固定搭配
     const fourCharBank = [
-      { question: "粉墨登场", answer: "坏人登上政治舞台" },
-      { question: "不落窠臼", answer: "有创新" },
-      { question: "九龙治水", answer: "一件事多个人管，结果没人管好" },
-      { question: "挂一漏万", answer: "列举少、遗漏多，内容不全" },
-      { question: "买椟还珠", answer: "舍本逐末" },
-      { question: "言近旨远", answer: "语言浅显，而意旨深远" },
-      { question: "如丘而止", answer: "遇到困难就停下" },
-      { question: "和风细雨", answer: "说话态度温和" },
-      { question: "亦步亦趋、拾人牙慧如何区分？", answer: "亦步亦趋：模仿别人，缺乏主见；拾人牙慧：拾取别人的只言片语当作自己的话。" },
-      { question: "纲举目张", answer: "抓住主要矛盾来解决问题" },
-      { question: "微文深诋", answer: "用苛细的法律条文陷害他人" },
-      { question: "扞格不通", answer: "观点或事物不合，互相排斥" },
-      { question: "与虎谋皮", answer: "跟恶人商量，要他放弃自己的利益" },
-      { question: "珠玑之言、不刊之论、金科玉律如何区分？", answer: "珠玑之言：言辞优美；不刊之论：正确言论；金科玉律：必须奉行、不可违反的准则或规矩。" },
-      { question: "入境问俗", answer: "到新环境后先了解当地规矩，以便融入、避免冒犯" },
-      { question: "火中取栗", answer: "冒险替别人出力，自己没得到好处反而吃亏" },
-      { question: "投鼠忌器", answer: "想做事有所顾忌，不敢放手去干" },
-      { question: "零和博弈", answer: "你赢我输、你死我活的竞争" },
-      { question: "勠力同心", answer: "齐心协力共同把一件事做好" },
-      { question: "反求诸己", answer: "反过来要求自己，从自身找原因" },
-      { question: "管窥蠡测", answer: "从竹管里看天，用瓢来量海水。比喻见识狭窄、片面，对事物了解极其有限" },
-      { question: "狗尾续貂、叠床架屋如何区分？", answer: "狗尾续貂：用次品续在好材料的后面，后续的内容不如原来的好；叠床架屋：在已经足够的基础上，再增加没有必要的东西" },
-      { question: "离经叛道", answer: "行为、言论不符合公认的准则" },
-      { question: "矫枉过正", answer: "纠正错误时用力过猛，陷入另一种偏差" },
-      { question: "珠联璧合", answer: "好的事物聚在一起，搭配得天衣无缝" },
-      { question: "积厚流光", answer: "前辈创下的功绩惠及后世" },
-      { question: "大相径庭、伯仲之间如何区分？", answer: "大相径庭：差别很大；伯仲之间：不相上下，难分优劣。" },
-      { question: "削足适履", answer: "不根据实际情况变通，生搬硬套" },
-      { question: "食古不化", answer: "读死书，不会创新" },
-      { question: "陈陈相因", answer: "死板地沿袭前人的做法" },
-      { question: "徒托空言", answer: "空谈，不付诸实践" },
-      { question: "无稽之谈", answer: "没有根据的话" },
-      { question: "因势利导", answer: "根据客观形势发展规律采取措施，把局势引向有利方向" },
-      { question: "众志成城、相濡以沫、休戚与共如何区分？", answer: "众志成城：众人团结一致就能克服困难；相濡以沫：在困境中以微小力量互相帮助；休戚与共：a和b命运相连" },
-      { question: "一以贯之", answer: "思想贯穿于事物之中" },
-      { question: "等量齐观", answer: "把不同的事物用相同标准评价" },
-      { question: "一得之愚、一得之功如何区分？", answer: "一得之愚：谦称自己提出的意见浅陋；一得之功：谦称自己做的事情不值一提。" },
-      { question: "博闻强识", answer: "一个人知识面宽泛、记忆力强" },
-      { question: "层台累榭", answer: "人工造景气势恢宏" },
-      { question: "铢两悉称", answer: "双方完全相等" },
-      { question: "异军突起", answer: "一支新力量突然变强，引起关注" },
-      { question: "习焉不察", answer: "习惯了某种事物，察觉不到其中异常" },
-      { question: "靶向治疗", answer: "精确治疗" },
-      { question: "欲盖弥彰、相得益彰如何区分？", answer: "欲盖弥彰：想掩盖坏事，结果反而暴露得更明显；相得益彰：两件事物互相配合，变得更好。" },
-      { question: "青黄不接", answer: "后继无人" },
-      { question: "运斤成风", answer: "手法纯熟，技艺出神入化" },
-      { question: "郑人买履", answer: "不知变通" },
-      { question: "叶公好龙", answer: "表面声称爱好某物，实际上并非真正爱好" },
-      { question: "不负众望、不孚众望如何区分？", answer: "不负众望：符合大家的期望；不孚众望：不符合大家的期望" },
-      { question: "积重难返", answer: "长期形成的不良习俗不容易改变" },
-      { question: "相沿成习", answer: "依照相传下来的一套做法，慢慢成为习惯" },
-      { question: "闭门造车", answer: "只凭主观办事，不顾客观实际" },
-      { question: "竿头直上", answer: "比喻进步快" },
-      { question: "闻过则喜", answer: "虚心接受别人的意见" },
-      { question: "虚怀若谷", answer: "谦虚、有气量" },
-      { question: "博采众长", answer: "吸收各家的长处" },
-      { question: "大而化之", answer: "办事不细致" },
-      { question: "大行其道", answer: "事物开始流行" },
-      { question: "独善其身", answer: "只顾自己，不关心身外事" },
-      { question: "各行其是", answer: "思想不统一，各人按自己的意愿主张去做" },
-      { question: "求全责备", answer: "对人、事要求完美" },
-      { question: "洗垢求瘢", answer: "对已经完美的人过分挑剔错误" },
-      { question: "超然物外", answer: "超脱于尘世之外" },
-      { question: "慎小谨微", answer: "对琐碎事情过分谨慎，以至于畏缩" },
-      { question: "技高一筹、更胜一筹如何区分？", answer: "技高一筹：范围较窄，专指技能更高；更胜一筹：范围更广，可指技能、风格等方面更好。" },
-      { question: "莺声燕语", answer: "女子婉转悦耳的声音" },
-      { question: "有的放矢", answer: "做事有明确的目的" },
-      { question: "昭然若揭", answer: "狼子野心，贬义" },
-      { question: "力薄才疏", answer: "人能力有限，自谦" },
-      { question: "一哄而上", answer: "强调时间上的同步，没有准备就做同一件事" },
-      { question: "浮光掠影", answer: "对事物印象不深刻" },
-      { question: "如虎添翼", answer: "强大的事物得到帮助后变得更强" },
-      { question: "如鱼得水", answer: "找到最适合自己的环境" },
-      { question: "如臂使指", answer: "指挥调动得心应手" },
-      { question: "乏善可陈", answer: "没有称赞的优点" },
-      { question: "差强人意", answer: "大体上还能使人满意" },
-      { question: "不名一文", answer: "贫困" },
-      { question: "笃志力行", answer: "坚定信念，努力实践" },
-      { question: "遥不可及、望尘莫及如何区分？", answer: "遥不可及：难以企及的目标 ；望尘莫及：差距大，赶不上。" },
-      { question: "虚与委蛇", answer: "表面热情，实际敷衍应付" },
-      { question: "雾里看花", answer: "事情复杂而看不明白（贬）；诗词境界高而领会不了（褒）；景色朦胧而看不清（褒）" },
-      { question: "缘木求鱼", answer: "方向错误，达不到目的" },
-      { question: "抱薪救火、饮鸩止渴、扬汤止沸如何区分？", answer: "抱薪救火、饮鸩止渴：方法错误，反而使问题更严重；扬汤止沸：方法不彻底，不能根治问题。" },
-      { question: "防微杜渐", answer: "坏事刚有苗头就加以制止" },
-      { question: "曲突徙薪", answer: "事先采取措施，防止危险发生" },
-      { question: "汗牛充栋、浩如烟海、卷帙繁浩如何区分？", answer: "汗牛充栋、浩如烟海：藏书多；卷帙繁浩：藏书多；一部书篇幅长。" },
-      { question: "博大精深", answer: "书籍内容丰富" },
-      { question: "谋定后动", answer: "做事前有明确计划，再采取行动" },
-      { question: "首当其冲", answer: "首先受到冲击或伤害" },
-      { question: "作壁上观", answer: "站在一旁观看，不帮忙" },
-      { question: "临空蹈虚", answer: "无史实依据的虚构" },
-      { question: "言不及义、一针见血如何区分？", answer: "言不及义：说话没有谈到正经道理或关键；一针见血：说话直截了当地指出问题关键。" },
-      { question: "熙熙攘攘", answer: "人来人往，非常热闹" },
-      { question: "各得其所", answer: "每个人或事物都得到合适的位置" },
-      { question: "举重若轻", answer: "处理复杂任务也能显得轻松" },
+      { id: "four-001", question: "粉墨登场", answer: "坏人登上政治舞台" },
+      { id: "four-002", question: "不落窠臼", answer: "有创新" },
+      { id: "four-003", question: "九龙治水", answer: "一件事多个人管，结果没人管好" },
+      { id: "four-004", question: "挂一漏万", answer: "列举少、遗漏多，内容不全" },
+      { id: "four-005", question: "买椟还珠", answer: "舍本逐末" },
+      { id: "four-006", question: "言近旨远", answer: "语言浅显，而意旨深远" },
+      { id: "four-007", question: "如丘而止", answer: "遇到困难就停下" },
+      { id: "four-008", question: "和风细雨", answer: "说话态度温和" },
+      { id: "four-009", question: "亦步亦趋、拾人牙慧如何区分？", answer: "亦步亦趋：模仿别人，缺乏主见；拾人牙慧：拾取别人的只言片语当作自己的话。" },
+      { id: "four-010", question: "纲举目张", answer: "抓住主要矛盾来解决问题" },
+      { id: "four-011", question: "微文深诋", answer: "用苛细的法律条文陷害他人" },
+      { id: "four-012", question: "扞格不通", answer: "观点或事物不合，互相排斥" },
+      { id: "four-013", question: "与虎谋皮", answer: "跟恶人商量，要他放弃自己的利益" },
+      { id: "four-014", question: "珠玑之言、不刊之论、金科玉律如何区分？", answer: "珠玑之言：言辞优美；不刊之论：正确言论；金科玉律：必须奉行、不可违反的准则或规矩。" },
+      { id: "four-015", question: "入境问俗", answer: "到新环境后先了解当地规矩，以便融入、避免冒犯" },
+      { id: "four-016", question: "火中取栗", answer: "冒险替别人出力，自己没得到好处反而吃亏" },
+      { id: "four-017", question: "投鼠忌器", answer: "想做事有所顾忌，不敢放手去干" },
+      { id: "four-018", question: "零和博弈", answer: "你赢我输、你死我活的竞争" },
+      { id: "four-019", question: "勠力同心", answer: "齐心协力共同把一件事做好" },
+      { id: "four-020", question: "反求诸己", answer: "反过来要求自己，从自身找原因" },
+      { id: "four-021", question: "管窥蠡测", answer: "从竹管里看天，用瓢来量海水。比喻见识狭窄、片面，对事物了解极其有限" },
+      { id: "four-022", question: "狗尾续貂、叠床架屋如何区分？", answer: "狗尾续貂：用次品续在好材料的后面，后续的内容不如原来的好；叠床架屋：在已经足够的基础上，再增加没有必要的东西" },
+      { id: "four-023", question: "离经叛道", answer: "行为、言论不符合公认的准则" },
+      { id: "four-024", question: "矫枉过正", answer: "纠正错误时用力过猛，陷入另一种偏差" },
+      { id: "four-025", question: "珠联璧合", answer: "好的事物聚在一起，搭配得天衣无缝" },
+      { id: "four-026", question: "积厚流光", answer: "前辈创下的功绩惠及后世" },
+      { id: "four-027", question: "大相径庭、伯仲之间如何区分？", answer: "大相径庭：差别很大；伯仲之间：不相上下，难分优劣。" },
+      { id: "four-028", question: "削足适履", answer: "不根据实际情况变通，生搬硬套" },
+      { id: "four-029", question: "食古不化", answer: "读死书，不会创新" },
+      { id: "four-030", question: "陈陈相因", answer: "死板地沿袭前人的做法" },
+      { id: "four-031", question: "徒托空言", answer: "空谈，不付诸实践" },
+      { id: "four-032", question: "无稽之谈", answer: "没有根据的话" },
+      { id: "four-033", question: "因势利导", answer: "根据客观形势发展规律采取措施，把局势引向有利方向" },
+      { id: "four-034", question: "众志成城、相濡以沫、休戚与共如何区分？", answer: "众志成城：众人团结一致就能克服困难；相濡以沫：在困境中以微小力量互相帮助；休戚与共：a和b命运相连" },
+      { id: "four-035", question: "一以贯之", answer: "思想贯穿于事物之中" },
+      { id: "four-036", question: "等量齐观", answer: "把不同的事物用相同标准评价" },
+      { id: "four-037", question: "一得之愚、一得之功如何区分？", answer: "一得之愚：谦称自己提出的意见浅陋；一得之功：谦称自己做的事情不值一提。" },
+      { id: "four-038", question: "博闻强识", answer: "一个人知识面宽泛、记忆力强" },
+      { id: "four-039", question: "层台累榭", answer: "人工造景气势恢宏" },
+      { id: "four-040", question: "铢两悉称", answer: "双方完全相等" },
+      { id: "four-041", question: "异军突起", answer: "一支新力量突然变强，引起关注" },
+      { id: "four-042", question: "习焉不察", answer: "习惯了某种事物，察觉不到其中异常" },
+      { id: "four-043", question: "靶向治疗", answer: "精确治疗" },
+      { id: "four-044", question: "欲盖弥彰、相得益彰如何区分？", answer: "欲盖弥彰：想掩盖坏事，结果反而暴露得更明显；相得益彰：两件事物互相配合，变得更好。" },
+      { id: "four-045", question: "青黄不接", answer: "后继无人" },
+      { id: "four-046", question: "运斤成风", answer: "手法纯熟，技艺出神入化" },
+      { id: "four-047", question: "郑人买履", answer: "不知变通" },
+      { id: "four-048", question: "叶公好龙", answer: "表面声称爱好某物，实际上并非真正爱好" },
+      { id: "four-049", question: "不负众望、不孚众望如何区分？", answer: "不负众望：符合大家的期望；不孚众望：不符合大家的期望" },
+      { id: "four-050", question: "积重难返", answer: "长期形成的不良习俗不容易改变" },
+      { id: "four-051", question: "相沿成习", answer: "依照相传下来的一套做法，慢慢成为习惯" },
+      { id: "four-052", question: "闭门造车", answer: "只凭主观办事，不顾客观实际" },
+      { id: "four-053", question: "竿头直上", answer: "比喻进步快" },
+      { id: "four-054", question: "闻过则喜", answer: "虚心接受别人的意见" },
+      { id: "four-055", question: "虚怀若谷", answer: "谦虚、有气量" },
+      { id: "four-056", question: "博采众长", answer: "吸收各家的长处" },
+      { id: "four-057", question: "大而化之", answer: "办事不细致" },
+      { id: "four-058", question: "大行其道", answer: "事物开始流行" },
+      { id: "four-059", question: "独善其身", answer: "只顾自己，不关心身外事" },
+      { id: "four-060", question: "各行其是", answer: "思想不统一，各人按自己的意愿主张去做" },
+      { id: "four-061", question: "求全责备", answer: "对人、事要求完美" },
+      { id: "four-062", question: "洗垢求瘢", answer: "对已经完美的人过分挑剔错误" },
+      { id: "four-063", question: "超然物外", answer: "超脱于尘世之外" },
+      { id: "four-064", question: "慎小谨微", answer: "对琐碎事情过分谨慎，以至于畏缩" },
+      { id: "four-065", question: "技高一筹、更胜一筹如何区分？", answer: "技高一筹：范围较窄，专指技能更高；更胜一筹：范围更广，可指技能、风格等方面更好。" },
+      { id: "four-066", question: "莺声燕语", answer: "女子婉转悦耳的声音" },
+      { id: "four-067", question: "有的放矢", answer: "做事有明确的目的" },
+      { id: "four-068", question: "昭然若揭", answer: "狼子野心，贬义" },
+      { id: "four-069", question: "力薄才疏", answer: "人能力有限，自谦" },
+      { id: "four-070", question: "一哄而上", answer: "强调时间上的同步，没有准备就做同一件事" },
+      { id: "four-071", question: "浮光掠影", answer: "对事物印象不深刻" },
+      { id: "four-072", question: "如虎添翼", answer: "强大的事物得到帮助后变得更强" },
+      { id: "four-073", question: "如鱼得水", answer: "找到最适合自己的环境" },
+      { id: "four-074", question: "如臂使指", answer: "指挥调动得心应手" },
+      { id: "four-075", question: "乏善可陈", answer: "没有称赞的优点" },
+      { id: "four-076", question: "差强人意", answer: "大体上还能使人满意" },
+      { id: "four-077", question: "不名一文", answer: "贫困" },
+      { id: "four-078", question: "笃志力行", answer: "坚定信念，努力实践" },
+      { id: "four-079", question: "遥不可及、望尘莫及如何区分？", answer: "遥不可及：难以企及的目标 ；望尘莫及：差距大，赶不上。" },
+      { id: "four-080", question: "虚与委蛇", answer: "表面热情，实际敷衍应付" },
+      { id: "four-081", question: "雾里看花", answer: "事情复杂而看不明白（贬）；诗词境界高而领会不了（褒）；景色朦胧而看不清（褒）" },
+      { id: "four-082", question: "缘木求鱼", answer: "方向错误，达不到目的" },
+      { id: "four-083", question: "抱薪救火、饮鸩止渴、扬汤止沸如何区分？", answer: "抱薪救火、饮鸩止渴：方法错误，反而使问题更严重；扬汤止沸：方法不彻底，不能根治问题。" },
+      { id: "four-084", question: "防微杜渐", answer: "坏事刚有苗头就加以制止" },
+      { id: "four-085", question: "曲突徙薪", answer: "事先采取措施，防止危险发生" },
+      { id: "four-086", question: "汗牛充栋、浩如烟海、卷帙繁浩如何区分？", answer: "汗牛充栋、浩如烟海：藏书多；卷帙繁浩：藏书多；一部书篇幅长。" },
+      { id: "four-087", question: "博大精深", answer: "书籍内容丰富" },
+      { id: "four-088", question: "谋定后动", answer: "做事前有明确计划，再采取行动" },
+      { id: "four-089", question: "首当其冲", answer: "首先受到冲击或伤害" },
+      { id: "four-090", question: "作壁上观", answer: "站在一旁观看，不帮忙" },
+      { id: "four-091", question: "临空蹈虚", answer: "无史实依据的虚构" },
+      { id: "four-092", question: "言不及义、一针见血如何区分？", answer: "言不及义：说话没有谈到正经道理或关键；一针见血：说话直截了当地指出问题关键。" },
+      { id: "four-093", question: "熙熙攘攘", answer: "人来人往，非常热闹" },
+      { id: "four-094", question: "各得其所", answer: "每个人或事物都得到合适的位置" },
+      { id: "four-095", question: "举重若轻", answer: "处理复杂任务也能显得轻松" },
     ];
 
-    // 当前使用的初始题库（根据首页选择而定）
-    let initialBank = [];
-
-    // 当前题库（从初始题库深拷贝一份，避免污染原始数据）
-    let questionBank = [];
-
-    let currentIndex = -1;
-
-    const homeScreen = document.getElementById('homeScreen');
-    const quizScreen = document.getElementById('quizScreen');
-    const btnModePercent = document.getElementById('btnModePercent');
-    const btnModePower = document.getElementById('btnModePower');
-    const btnModeTwoChar = document.getElementById('btnModeTwoChar');
-    const btnModeThreeChar = document.getElementById('btnModeThreeChar');
-    const btnModeFourChar = document.getElementById('btnModeFourChar');
-    const questionText = document.getElementById('questionText');
-    const questionLabel = document.getElementById('questionLabel');
-    const answerBox = document.getElementById('answerBox');
-    const answerText = document.getElementById('answerText');
-    const btnShow = document.getElementById('btnShow');
-    const judgeButtons = document.getElementById('judgeButtons');
-    const btnCorrect = document.getElementById('btnCorrect');
-    const btnWrong = document.getElementById('btnWrong');
-    const btnRestart = document.getElementById('btnRestart');
-    const counter = document.getElementById('counter');
-    const btnHome = document.getElementById('btnHome');
-
-    // 隐藏答案与判断按钮，恢复到“查看答案”状态
-    function resetControls() {
-      answerBox.classList.remove('show');
-      judgeButtons.classList.add('hidden');
-      btnRestart.classList.add('hidden');
-      btnShow.classList.remove('hidden');
-    }
-
-    // 随机抽取并显示下一题
-    function showRandomQuestion() {
-      resetControls();
-
-      if (questionBank.length === 0) {
-        questionLabel.classList.add('hidden');
-        questionText.textContent = "题库已清空";
-        questionText.classList.add('empty');
-        btnShow.classList.add('hidden');
-        judgeButtons.classList.add('hidden');
-        answerBox.classList.remove('show');
-        btnRestart.classList.remove('hidden');
-        counter.textContent = "剩余 0 题";
-        currentIndex = -1;
-        return;
-      }
-
-      questionLabel.classList.remove('hidden');
-      questionText.classList.remove('empty');
-
-      currentIndex = Math.floor(Math.random() * questionBank.length);
-      questionText.textContent = questionBank[currentIndex].question;
-      counter.textContent = "剩余 " + questionBank.length + " 题";
-    }
-
-    // 查看答案
-    btnShow.addEventListener('click', function () {
-      if (currentIndex < 0) return;
-      answerText.textContent = questionBank[currentIndex].answer;
-      answerBox.classList.add('show');
-      btnShow.classList.add('hidden');
-      judgeButtons.classList.remove('hidden');
-    });
-
-    // √ 已掌握：从题库删除当前题，切换下一题
-    btnCorrect.addEventListener('click', function () {
-      if (currentIndex < 0) return;
-      questionBank.splice(currentIndex, 1);
-      showRandomQuestion();
-    });
-
-    // × 未掌握：保留题目，切换下一题
-    btnWrong.addEventListener('click', function () {
-      showRandomQuestion();
-    });
-
-    // 重新开始：回到首页重新选择
-    btnRestart.addEventListener('click', function () {
-      goHome();
-    });
-
-    // 返回首页
-    function goHome() {
-      quizScreen.classList.add('hidden');
-      homeScreen.classList.remove('hidden');
-    }
-
-    // 答题界面：返回首页按钮
-    btnHome.addEventListener('click', function () {
-      goHome();
-    });
-
-    // 以指定题库开始一轮练习
-    function startQuiz(bank) {
-      initialBank = bank;
-      questionBank = initialBank.map(function (item) { return { ...item }; });
-      homeScreen.classList.add('hidden');
-      quizScreen.classList.remove('hidden');
-      showRandomQuestion();
-    }
-
-    // 首页：选择百化分
-    btnModePercent.addEventListener('click', function () {
-      startQuiz(percentBank);
-    });
-
-    // 首页：选择次方数
-    btnModePower.addEventListener('click', function () {
-      startQuiz(powerBank);
-    });
-
-    // 首页：选择词语练习类型
-    btnModeTwoChar.addEventListener('click', function () {
-      startQuiz(twoCharBank);
-    });
-
-    btnModeThreeChar.addEventListener('click', function () {
-      startQuiz(threeCharBank);
-    });
-
-    btnModeFourChar.addEventListener('click', function () {
-      startQuiz(fourCharBank);
-    });
+    const banks = [
+      { name: '百化分', cards: percentBank },
+      { name: '次方数', cards: powerBank },
+      { name: '两字词语', cards: twoCharBank },
+      { name: '三字词语', cards: threeCharBank },
+      { name: '四字成语', cards: fourCharBank }
+    ];
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
